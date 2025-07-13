@@ -1,0 +1,38 @@
+name: build & deploy
+
+on:
+  push:
+    branches: [ main, mvp ]       # ← ajoute toutes les branches à builder
+  pull_request:                   # facultatif : vérifie les PR vers main
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Récupère le code
+      - uses: actions/checkout@v4
+
+      # 2) Installe Node et met en cache node_modules
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 3) Dépendances
+      - run: npm ci
+
+      # 4) Build Angular en prod
+      - run: |
+          npx ng build --configuration production --base-href /life-dashboard/
+        # ↑ garde le même base-href pour toutes les branches
+
+      # 5) Déploiement GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist/life-dashboard
+          # Si on est sur mvp, on pousse dans le sous-dossier mvp/
+          destination_dir: ${{ github.ref_name == 'mvp' && 'mvp' || '.' }}
